@@ -4,15 +4,22 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+    <!-- Track: the full ring -->
     <path
-        android:pathData="M40,42 L52,54 L40,66"
-        android:strokeColor="#B8BB26"
-        android:strokeWidth="5"
+        android:pathData="M54,28 A26,26 0 1,1 54,80 A26,26 0 1,1 54,28 Z"
+        android:strokeColor="#2E2E33"
+        android:strokeWidth="6.5" />
+    <!-- Progress: three quarters of the ring, in orange -->
+    <path
+        android:pathData="M54,28 A26,26 0 1,1 28,54"
+        android:strokeColor="#F58A2E"
+        android:strokeWidth="6.5"
+        android:strokeLineCap="round" />
+    <!-- Check mark -->
+    <path
+        android:pathData="M43.5,55.2 L51,62.8 L65.2,47.6"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="7"
         android:strokeLineCap="round"
         android:strokeLineJoin="round" />
-    <path
-        android:pathData="M57,67 L70,67"
-        android:strokeColor="#EBDBB2"
-        android:strokeWidth="5"
-        android:strokeLineCap="round" />
 </vector>

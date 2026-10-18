@@ -12,7 +12,7 @@ Every push to `main` builds the app on GitHub.
 Open the "Releases" page of this repository, open the "Taskline (latest build)" release and download `Taskline.apk`.
 Open the file on the phone and allow installs from that source when Android asks.
 
-The app is called "Taskline 2" on the phone and installs next to the earlier web-view version.
+The app is called "Task Manager" on the phone and installs next to the earlier web-view version.
 
 ## About the signing key
 
