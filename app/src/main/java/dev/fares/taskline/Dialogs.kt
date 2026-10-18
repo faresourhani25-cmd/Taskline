@@ -56,15 +56,14 @@ private fun FieldLabel(text: String) {
 @Composable
 private fun Chip(label: String, selected: Boolean, color: Color, onClick: () -> Unit) {
     val p = LocalPalette.current
-    val shape = RoundedCornerShape(2.dp)
+    val shape = RoundedCornerShape(50)
     Box(
         modifier = Modifier
             .heightIn(min = 40.dp)
             .clip(shape)
-            .background(if (selected) color else Color.Transparent)
-            .border(1.dp, if (selected) color else p.line, shape)
+            .background(if (selected) color else p.raised)
             .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp),
+            .padding(horizontal = 16.dp),
         contentAlignment = Alignment.Center,
     ) {
         Txt(label, color = if (selected) p.bg else p.fg, size = 12.sp, bold = selected, maxLines = 1)
@@ -74,7 +73,7 @@ private fun Chip(label: String, selected: Boolean, color: Color, onClick: () -> 
 @Composable
 private fun DateField(label: String, value: String?, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val p = LocalPalette.current
-    val shape = RoundedCornerShape(2.dp)
+    val shape = RoundedCornerShape(16.dp)
     val text = parseDate(value)?.let { formatDate(it) + " " + it.year } ?: "none"
     Column(modifier) {
         FieldLabel(label)
@@ -83,9 +82,9 @@ private fun DateField(label: String, value: String?, onClick: () -> Unit, modifi
                 .fillMaxWidth()
                 .heightIn(min = 48.dp)
                 .clip(shape)
-                .border(1.dp, p.mute, shape)
+                .background(p.raised)
                 .clickable(onClick = onClick)
-                .padding(horizontal = 10.dp),
+                .padding(horizontal = 14.dp),
             contentAlignment = Alignment.CenterStart,
         ) {
             Txt(text, color = if (value == null) p.mute else p.fg)
@@ -93,7 +92,7 @@ private fun DateField(label: String, value: String?, onClick: () -> Unit, modifi
     }
 }
 
-private val fieldStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 16.sp)
+private val fieldStyle = TextStyle(fontFamily = FontFamily.Default, fontSize = 16.sp)
 
 @Composable
 fun TaskDialog(
@@ -121,11 +120,11 @@ fun TaskDialog(
         val s = start
         val e = end
         if (t.isEmpty()) {
-            error = "title is empty"
+            error = "Title is empty"
             return
         }
         if (s != null && e != null && e < s) {
-            error = "end is before start"
+            error = "End is before start"
             return
         }
         onSave(
@@ -148,28 +147,29 @@ fun TaskDialog(
         Surface(
             color = p.surface,
             contentColor = p.fg,
-            shape = RoundedCornerShape(4.dp),
+            shape = RoundedCornerShape(28.dp),
             modifier = Modifier.fillMaxWidth().padding(12.dp),
         ) {
             Column(Modifier.verticalScroll(rememberScrollState()).padding(16.dp)) {
-                Txt(if (initial == null) ":new task" else ":edit task", color = p.green, bold = true)
+                Txt(if (initial == null) "New task" else "Edit task", size = 24.sp, serif = true)
 
-                FieldLabel("title")
+                FieldLabel("Title")
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it; error = "" },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
+                    shape = RoundedCornerShape(16.dp),
                     textStyle = fieldStyle,
                 )
 
                 if (goals.isNotEmpty()) {
-                    FieldLabel("goal")
+                    FieldLabel("Goal")
                     Row(
                         modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
-                        Chip("none", goalId == null, p.fg) { goalId = null }
+                        Chip("None", goalId == null, p.fg) { goalId = null }
                         for (g in goals) {
                             Chip(g.title, goalId == g.id, p.goal(g.color)) { goalId = g.id }
                         }
@@ -177,10 +177,10 @@ fun TaskDialog(
                 }
 
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    DateField("start", start, onClick = {
+                    DateField("Start", start, onClick = {
                         pickDate(context, start, today) { start = it; error = "" }
                     }, modifier = Modifier.weight(1f))
-                    DateField("end", end, onClick = {
+                    DateField("End", end, onClick = {
                         pickDate(context, end ?: start, today) { end = it; error = "" }
                     }, modifier = Modifier.weight(1f))
                 }
@@ -190,7 +190,7 @@ fun TaskDialog(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Txt("end:", color = p.dim, size = 12.sp)
+                    Txt("End:", color = p.dim, size = 12.sp)
                     for ((label, days) in listOf("+1d" to 1L, "+3d" to 3L, "+1w" to 7L, "+1m" to 30L)) {
                         Chip(label, false, p.fg) {
                             val base = parseDate(start) ?: today
@@ -198,13 +198,13 @@ fun TaskDialog(
                             error = ""
                         }
                     }
-                    Chip("clear end", false, p.fg) { end = null }
-                    Chip("clear start", false, p.fg) { start = null }
+                    Chip("Clear end", false, p.fg) { end = null }
+                    Chip("Clear start", false, p.fg) { start = null }
                 }
 
-                FieldLabel("priority")
+                FieldLabel("Priority")
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    val names = listOf("low", "med", "high")
+                    val names = listOf("Low", "Medium", "High")
                     for (i in 0..2) {
                         TermButton(
                             label = names[i],
@@ -216,12 +216,13 @@ fun TaskDialog(
                     }
                 }
 
-                FieldLabel("note")
+                FieldLabel("Note")
                 OutlinedTextField(
                     value = note,
                     onValueChange = { note = it },
                     modifier = Modifier.fillMaxWidth().heightIn(min = 72.dp),
                     maxLines = 4,
+                    shape = RoundedCornerShape(16.dp),
                     textStyle = fieldStyle,
                 )
 
@@ -232,12 +233,12 @@ fun TaskDialog(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    TermButton(":w save", onClick = { save() }, color = p.green, filled = true)
-                    TermButton(":q cancel", onClick = onDismiss)
+                    TermButton("Save", onClick = { save() }, color = p.green, filled = true)
+                    TermButton("Cancel", onClick = onDismiss)
                     if (initial != null) {
                         Spacer(Modifier.weight(1f))
                         TermButton(
-                            if (armed) ":rm sure?" else ":rm delete",
+                            if (armed) "Sure?" else "Delete",
                             onClick = { if (armed) onDelete() else armed = true },
                             color = p.red,
                             filled = armed,
@@ -265,24 +266,25 @@ fun GoalDialog(
     var color by remember { mutableStateOf(initial?.color ?: (colorCount % 6)) }
     var error by remember { mutableStateOf("") }
     var armed by remember { mutableStateOf(false) }
-    val shape = RoundedCornerShape(2.dp)
+    val shape = RoundedCornerShape(50)
 
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(
             color = p.surface,
             contentColor = p.fg,
-            shape = RoundedCornerShape(4.dp),
+            shape = RoundedCornerShape(28.dp),
             modifier = Modifier.fillMaxWidth().padding(12.dp),
         ) {
             Column(Modifier.verticalScroll(rememberScrollState()).padding(16.dp)) {
-                Txt(if (initial == null) ":new goal" else ":edit goal", color = p.green, bold = true)
+                Txt(if (initial == null) "New goal" else "Edit goal", size = 24.sp, serif = true)
 
-                FieldLabel("title")
+                FieldLabel("Title")
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it; error = "" },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
+                    shape = RoundedCornerShape(16.dp),
                     textStyle = fieldStyle,
                 )
 
@@ -291,13 +293,13 @@ fun GoalDialog(
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.Bottom,
                 ) {
-                    DateField("target date (optional)", target, onClick = {
+                    DateField("Target date (optional)", target, onClick = {
                         pickDate(context, target, today) { target = it }
                     }, modifier = Modifier.weight(1f))
-                    TermButton("clear", onClick = { target = null })
+                    TermButton("Clear", onClick = { target = null })
                 }
 
-                FieldLabel("color")
+                FieldLabel("Color")
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     for (i in 0..5) {
                         Box(
@@ -319,11 +321,11 @@ fun GoalDialog(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     TermButton(
-                        ":w save",
+                        "Save",
                         onClick = {
                             val t = title.trim()
                             if (t.isEmpty()) {
-                                error = "title is empty"
+                                error = "Title is empty"
                             } else {
                                 onSave(
                                     Goal(
@@ -339,11 +341,11 @@ fun GoalDialog(
                         color = p.green,
                         filled = true,
                     )
-                    TermButton(":q cancel", onClick = onDismiss)
+                    TermButton("Cancel", onClick = onDismiss)
                     if (initial != null) {
                         Spacer(Modifier.weight(1f))
                         TermButton(
-                            if (armed) ":rm sure?" else ":rm delete",
+                            if (armed) "Sure?" else "Delete",
                             onClick = { if (armed) onDelete() else armed = true },
                             color = p.red,
                             filled = armed,

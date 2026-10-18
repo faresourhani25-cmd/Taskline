@@ -58,7 +58,7 @@ fun TimelineScreen(state: AppState, onEdit: (String) -> Unit) {
     val noDates = state.tasks.size - dated.size
 
     if (dated.isEmpty()) {
-        EmptyState("no dated tasks", "give a task a start and an end date and it shows up here as a bar.")
+        EmptyState("No dated tasks", "Give a task a start and an end date and it shows up here as a bar.")
         return
     }
 
@@ -93,10 +93,10 @@ fun TimelineScreen(state: AppState, onEdit: (String) -> Unit) {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                Txt("# ${dated.size} scheduled", color = p.dim, size = 12.sp, modifier = Modifier.weight(1f))
+                Txt("${dated.size} scheduled", color = p.dim, size = 12.sp, modifier = Modifier.weight(1f))
                 TermButton("−", onClick = { if (zoom > 0) zoom -= 1 }, enabled = zoom > 0)
                 TermButton("+", onClick = { if (zoom < 2) zoom += 1 }, enabled = zoom < 2)
-                TermButton("today", onClick = { scope.launch { hScroll.animateScrollTo(todayTarget()) } }, color = p.green)
+                TermButton("today", onClick = { scope.launch { hScroll.animateScrollTo(todayTarget()) } }, color = p.orange)
             }
 
             Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(vScroll)) {
@@ -117,12 +117,13 @@ fun TimelineScreen(state: AppState, onEdit: (String) -> Unit) {
                     val word = if (noDates > 1) "tasks have" else "task has"
                     val pron = if (noDates > 1) "them" else "it"
                     Txt(
-                        "# $noDates $word no dates. find $pron in ls.",
+                        "$noDates $word no dates. Find $pron in List.",
                         color = p.dim,
                         size = 12.sp,
                         modifier = Modifier.padding(16.dp),
                     )
                 }
+                Spacer(Modifier.height(110.dp))
             }
         }
     }
@@ -143,7 +144,7 @@ private fun TimelineBody(
     val p = LocalPalette.current
     val months = remember(lo, n) { monthSegments(lo, n) }
     val weekendShade = p.fg.copy(alpha = 0.06f)
-    val todayColor = p.green
+    val todayColor = p.orange
     val lineColor = p.line
 
     Column(Modifier.width(dayW * n)) {
@@ -161,7 +162,7 @@ private fun TimelineBody(
             }
         }
         // Day header
-        Row(Modifier.fillMaxWidth().background(p.surface).dashedBottom(lineColor)) {
+        Row(Modifier.fillMaxWidth().background(p.surface).lineBottom(lineColor)) {
             for (i in 0 until n) {
                 val d = lo.plusDays(i.toLong())
                 val isToday = i == todayIdx
@@ -231,10 +232,10 @@ private fun TimelineRow(
     val len = daysBetween(sp.start, sp.end) + 1
     val color = if (goal != null) p.goal(goal.color) else p.dim
     val overdue = task.status(today) == Status.OVERDUE
-    val shape = RoundedCornerShape(2.dp)
+    val shape = RoundedCornerShape(11.dp)
     val barWidth = dayW * len - 2.dp
 
-    Box(Modifier.fillMaxWidth().height(58.dp).dashedBottom(p.line)) {
+    Box(Modifier.fillMaxWidth().height(58.dp).lineBottom(p.line)) {
         // The title stays in view while the timeline scrolls sideways.
         Row(
             modifier = Modifier

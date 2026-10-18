@@ -1,11 +1,11 @@
 package dev.fares.taskline
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -19,7 +19,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -29,7 +28,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-/** Monospace text in the terminal style. */
+/** App text. Sans-serif by default, serif for titles. */
 @Composable
 fun Txt(
     text: String,
@@ -39,15 +38,16 @@ fun Txt(
     bold: Boolean = false,
     strike: Boolean = false,
     maxLines: Int = Int.MAX_VALUE,
+    serif: Boolean = false,
 ) {
     Text(
         text = text,
         modifier = modifier,
         color = color,
         fontSize = size,
-        lineHeight = size * 1.4f,
-        fontFamily = FontFamily.Monospace,
-        fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal,
+        lineHeight = size * 1.3f,
+        fontFamily = if (serif) FontFamily.Serif else FontFamily.Default,
+        fontWeight = if (bold) FontWeight.SemiBold else FontWeight.Normal,
         textDecoration = if (strike) TextDecoration.LineThrough else null,
         maxLines = maxLines,
         overflow = TextOverflow.Ellipsis,
@@ -68,13 +68,14 @@ fun TxtRich(
         modifier = modifier,
         color = color,
         fontSize = size,
-        lineHeight = size * 1.4f,
-        fontFamily = FontFamily.Monospace,
+        lineHeight = size * 1.3f,
+        fontFamily = FontFamily.Default,
         maxLines = maxLines,
         overflow = TextOverflow.Ellipsis,
     )
 }
 
+/** A rounded pill button. */
 @Composable
 fun TermButton(
     label: String,
@@ -85,40 +86,59 @@ fun TermButton(
     filled: Boolean = false,
 ) {
     val p = LocalPalette.current
-    val shape = RoundedCornerShape(2.dp)
+    val shape = RoundedCornerShape(50)
     val c = if (enabled) color else p.mute
     Box(
         modifier = modifier
             .heightIn(min = 44.dp)
             .clip(shape)
-            .background(if (filled) c else Color.Transparent)
-            .border(1.dp, c, shape)
+            .background(if (filled) c else p.raised)
             .clickable(enabled = enabled, onClick = onClick)
-            .padding(horizontal = 12.dp),
+            .padding(horizontal = 18.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Txt(label, color = if (filled) p.bg else c, bold = filled)
+        Txt(label, color = if (filled) p.bg else c, bold = filled, maxLines = 1)
     }
 }
 
-/** A dashed line along the bottom edge, like a row separator in a terminal table. */
-fun Modifier.dashedBottom(color: Color): Modifier = this.drawBehind {
+/** A thin line along the bottom edge, used as a row separator. */
+fun Modifier.lineBottom(color: Color): Modifier = this.drawBehind {
     val y = size.height - 0.5f
     drawLine(
         color = color,
         start = Offset(0f, y),
         end = Offset(size.width, y),
         strokeWidth = 1f,
-        pathEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 8f)),
     )
+}
+
+/** A rounded progress bar. */
+@Composable
+fun ProgressTrack(percent: Int, color: Color, modifier: Modifier = Modifier) {
+    val p = LocalPalette.current
+    val shape = RoundedCornerShape(50)
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(8.dp)
+            .clip(shape)
+            .background(p.raised),
+    ) {
+        Box(
+            Modifier
+                .fillMaxWidth((percent / 100f).coerceIn(0f, 1f))
+                .fillMaxHeight()
+                .background(color),
+        )
+    }
 }
 
 @Composable
 fun EmptyState(title: String, text: String) {
     val p = LocalPalette.current
     Column(Modifier.fillMaxWidth().padding(24.dp)) {
-        Txt("# $title", bold = true)
-        Spacer(Modifier.height(4.dp))
+        Txt(title, size = 22.sp, serif = true)
+        Spacer(Modifier.height(6.dp))
         Txt(text, color = p.dim)
     }
 }
