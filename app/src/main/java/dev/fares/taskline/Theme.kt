@@ -1,6 +1,5 @@
 package dev.fares.taskline
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
@@ -9,7 +8,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
-/** Terminal colors (Gruvbox). Dark and light follow the phone's setting. */
+/** Terminal colors (Gruvbox). The app is always dark; the light palette is kept but unused. */
 class Palette(
     val bg: Color,
     val surface: Color,
@@ -64,7 +63,7 @@ val LocalPalette = staticCompositionLocalOf { DarkPalette }
 
 @Composable
 fun TasklineTheme(content: @Composable () -> Unit) {
-    val dark = isSystemInDarkTheme()
+    val dark = true
     val p = if (dark) DarkPalette else LightPalette
     val scheme = if (dark) {
         darkColorScheme(

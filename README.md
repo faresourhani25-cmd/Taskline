@@ -2,7 +2,7 @@
 
 A to-do and goals app for Android, written in Kotlin with Jetpack Compose.
 It has a list view, a timeline view for tasks with a start and an end date, and goals with progress.
-The look is a Linux terminal (Gruvbox colors, monospace text) and follows the phone's dark or light setting.
+The look is a Linux terminal (Gruvbox colors, monospace text) and is always dark.
 
 Tasks are saved on the phone only.
 
