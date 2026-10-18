@@ -54,6 +54,7 @@ class Store(context: Context) {
         done = o.optBoolean("done", false),
         doneAt = if (o.isNull("doneAt")) null else o.optLong("doneAt"),
         created = o.optLong("created", 0L),
+        minutes = if (o.isNull("minutes")) null else o.optInt("minutes").takeIf { it > 0 },
     )
 
     private fun goalFrom(o: JSONObject): Goal = Goal(
@@ -76,6 +77,7 @@ class Store(context: Context) {
         o.put("done", t.done)
         if (t.doneAt != null) o.put("doneAt", t.doneAt)
         o.put("created", t.created)
+        if (t.minutes != null) o.put("minutes", t.minutes)
         return o
     }
 

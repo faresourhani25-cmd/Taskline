@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -224,6 +225,18 @@ fun TaskRow(
             TxtRich(meta, color = p.dim, size = 13.sp, maxLines = 2)
             if (task.note.isNotBlank()) {
                 Txt(task.note, color = p.mute, size = 12.sp, maxLines = 2)
+            }
+        }
+        val mins = task.minutes
+        if (mins != null) {
+            Spacer(Modifier.width(8.dp))
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .background(if (onCard) p.raised else p.surface)
+                    .padding(horizontal = 10.dp, vertical = 5.dp),
+            ) {
+                Txt(minutesLabel(mins), color = p.fg, size = 12.sp, bold = true, maxLines = 1)
             }
         }
         Spacer(Modifier.width(8.dp))

@@ -112,6 +112,7 @@ fun TaskDialog(
     var end by remember { mutableStateOf<String?>(if (initial == null) today.plusDays(2).toString() else initial.end) }
     var prio by remember { mutableStateOf(initial?.prio ?: 0) }
     var note by remember { mutableStateOf(initial?.note ?: "") }
+    var timeText by remember { mutableStateOf(initial?.minutes?.let { minutesLabel(it) } ?: "") }
     var error by remember { mutableStateOf("") }
     var armed by remember { mutableStateOf(false) }
 
@@ -127,6 +128,11 @@ fun TaskDialog(
             error = "End is before start"
             return
         }
+        val mins = if (timeText.isBlank()) null else parseMinutes(timeText)
+        if (timeText.isNotBlank() && mins == null) {
+            error = "Time needed: try 4h, 90m or 1h 30m"
+            return
+        }
         onSave(
             Task(
                 id = initial?.id ?: newId("t"),
@@ -139,6 +145,7 @@ fun TaskDialog(
                 done = initial?.done ?: false,
                 doneAt = initial?.doneAt,
                 created = initial?.created ?: System.currentTimeMillis(),
+                minutes = mins,
             ),
         )
     }
@@ -213,6 +220,27 @@ fun TaskDialog(
                     Chip("Clear end", false, p.fg) { end = null }
                     Chip("Clear start", false, p.fg) { start = null }
                 }
+
+                FieldLabel("Time needed")
+                Row(
+                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Chip("None", timeText.isBlank(), p.fg) { timeText = ""; error = "" }
+                    for ((label, m) in listOf("30m" to 30, "1h" to 60, "2h" to 120, "4h" to 240, "8h" to 480)) {
+                        Chip(label, parseMinutes(timeText) == m, p.orange) { timeText = label; error = "" }
+                    }
+                }
+                OutlinedTextField(
+                    value = timeText,
+                    onValueChange = { timeText = it; error = "" },
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    singleLine = true,
+                    shape = RoundedCornerShape(16.dp),
+                    textStyle = fieldStyle,
+                    placeholder = { Txt("or type it: 3h, 90m, 1h 30m", color = p.mute, size = 14.sp) },
+                )
 
                 FieldLabel("Priority")
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {

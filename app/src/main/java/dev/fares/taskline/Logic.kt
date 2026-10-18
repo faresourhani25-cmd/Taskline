@@ -25,6 +25,8 @@ data class Task(
     val done: Boolean,
     val doneAt: Long?,
     val created: Long,
+    /** How long the task takes, in minutes. Null when no estimate was given. */
+    val minutes: Int? = null,
 )
 
 enum class Status { OVERDUE, ACTIVE, UPCOMING, ANYTIME, DONE }
@@ -126,6 +128,37 @@ fun durationLabel(days: Int): String = when {
     days == 1 -> "1 day"
     days >= 14 && days % 7 == 0 -> "${days / 7} weeks"
     else -> "$days days"
+}
+
+/** 30 -> "30m", 240 -> "4h", 90 -> "1h 30m". */
+fun minutesLabel(m: Int): String = when {
+    m < 60 -> "${m}m"
+    m % 60 == 0 -> "${m / 60}h"
+    else -> "${m / 60}h ${m % 60}m"
+}
+
+private val MINUTES_PART = Regex("(\\d+(?:\\.\\d+)?)\\s*(hours?|hrs?|h|minutes?|mins?|m)?")
+
+/** Reads "4h", "90m", "1h 30m", "1.5h" or "45" (minutes). Null when it can't be read. */
+fun parseMinutes(text: String): Int? {
+    val s = text.trim().lowercase().replace(',', '.')
+    if (s.isEmpty()) return null
+    var total = 0.0
+    var count = 0
+    var pos = 0
+    while (pos < s.length) {
+        while (pos < s.length && s[pos] == ' ') pos++
+        if (pos >= s.length) break
+        val m = MINUTES_PART.find(s, pos) ?: return null
+        if (m.range.first != pos && s.substring(pos, m.range.first).isNotBlank()) return null
+        val value = m.groupValues[1].toDouble()
+        val unit = m.groupValues[2]
+        total += if (unit.startsWith("h")) value * 60 else value
+        count++
+        pos = m.range.last + 1
+    }
+    val mins = Math.round(total).toInt()
+    return if (count > 0 && mins in 1..43200) mins else null
 }
 
 fun Task.datesLabel(): String {

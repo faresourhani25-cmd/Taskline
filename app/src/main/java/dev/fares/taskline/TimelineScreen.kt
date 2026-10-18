@@ -267,6 +267,16 @@ private fun TimelineRow(
                     maxLines = 1,
                 )
             }
+            val mins = task.minutes
+            if (mins != null) {
+                Txt(
+                    "  " + minutesLabel(mins),
+                    color = p.orange,
+                    size = 12.sp,
+                    bold = true,
+                    maxLines = 1,
+                )
+            }
         }
         Box(
             modifier = Modifier

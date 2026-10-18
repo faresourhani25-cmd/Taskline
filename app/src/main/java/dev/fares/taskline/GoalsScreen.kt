@@ -52,6 +52,7 @@ fun GoalsScreen(
             val mine = state.tasks.filter { it.goalId == goal.id }.sortedWith(byStart)
             val open = hidden[goal.id] != true
             val color = p.goal(goal.color)
+            val planned = mine.sumOf { it.minutes ?: 0 }
 
             Column(
                 modifier = Modifier
@@ -71,7 +72,9 @@ fun GoalsScreen(
                 }
                 ProgressTrack(progress.percent, color, Modifier.padding(top = 12.dp))
                 Txt(
-                    "${progress.done}/${progress.total} tasks done" + targetLabel(goal, today),
+                    "${progress.done}/${progress.total} tasks done" +
+                        (if (planned > 0) " · " + minutesLabel(planned) + " planned" else "") +
+                        targetLabel(goal, today),
                     color = p.dim,
                     size = 13.sp,
                     modifier = Modifier.padding(top = 8.dp),
