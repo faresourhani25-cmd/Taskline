@@ -141,6 +141,7 @@ fun TaskRow(
         Status.ANYTIME -> "No dates"
     }
     val rel = task.relative(today)
+    val dur = task.durationDays()
     val relColor = when (rel?.tone) {
         Tone.LATE -> p.red
         Tone.SOON -> p.yellow
@@ -152,6 +153,10 @@ fun TaskRow(
         if (status != Status.ANYTIME) {
             append("  •  ")
             append(task.datesLabel())
+            if (dur != null) {
+                append("  •  ")
+                append(durationLabel(dur))
+            }
         }
         if (rel != null) {
             append("  •  ")

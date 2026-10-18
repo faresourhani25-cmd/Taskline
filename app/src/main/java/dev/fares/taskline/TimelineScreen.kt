@@ -232,6 +232,7 @@ private fun TimelineRow(
     val len = daysBetween(sp.start, sp.end) + 1
     val color = if (goal != null) p.goal(goal.color) else p.dim
     val overdue = task.status(today) == Status.OVERDUE
+    val dur = task.durationDays()
     val shape = RoundedCornerShape(11.dp)
     val barWidth = dayW * len - 2.dp
 
@@ -258,6 +259,14 @@ private fun TimelineRow(
                 maxLines = 1,
                 size = 13.sp,
             )
+            if (dur != null) {
+                Txt(
+                    "  " + durationLabel(dur),
+                    color = p.dim,
+                    size = 12.sp,
+                    maxLines = 1,
+                )
+            }
         }
         Box(
             modifier = Modifier

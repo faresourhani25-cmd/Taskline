@@ -114,6 +114,20 @@ fun Task.relative(today: LocalDate): Rel? {
     return Rel(if (m == 1L) "starts tomorrow" else "starts in ${m}d", Tone.NONE)
 }
 
+/** Days from start to end, counting both days. Null unless the task has both dates. */
+fun Task.durationDays(): Int? {
+    val s = parseDate(start) ?: return null
+    val e = parseDate(end) ?: return null
+    if (e.isBefore(s)) return null
+    return ChronoUnit.DAYS.between(s, e).toInt() + 1
+}
+
+fun durationLabel(days: Int): String = when {
+    days == 1 -> "1 day"
+    days >= 14 && days % 7 == 0 -> "${days / 7} weeks"
+    else -> "$days days"
+}
+
 fun Task.datesLabel(): String {
     val s = parseDate(start)
     val e = parseDate(end)

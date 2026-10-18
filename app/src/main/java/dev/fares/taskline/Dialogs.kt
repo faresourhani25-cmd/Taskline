@@ -185,6 +185,18 @@ fun TaskDialog(
                     }, modifier = Modifier.weight(1f))
                 }
 
+                val startDate = parseDate(start)
+                val endDate = parseDate(end)
+                if (startDate != null && endDate != null && !endDate.isBefore(startDate)) {
+                    Txt(
+                        "Duration: " + durationLabel(daysBetween(startDate, endDate) + 1),
+                        color = p.orange,
+                        size = 13.sp,
+                        bold = true,
+                        modifier = Modifier.padding(top = 10.dp),
+                    )
+                }
+
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp).horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
