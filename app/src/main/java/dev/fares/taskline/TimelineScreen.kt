@@ -246,11 +246,8 @@ private fun TimelineRow(
                 .padding(top = 6.dp),
         ) {
             if (task.prio > 0) {
-                Txt(
-                    if (task.prio == 2) "!! " else "! ",
-                    color = if (task.prio == 2) p.red else p.yellow,
-                    bold = true,
-                )
+                FlagIcon(prioColor(p, task.prio), iconSize = 16.dp)
+                Spacer(Modifier.width(4.dp))
             }
             Txt(
                 task.title,

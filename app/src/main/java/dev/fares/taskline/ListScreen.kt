@@ -204,14 +204,9 @@ fun TaskRow(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(3.dp),
         ) {
-            Row {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 if (task.prio > 0) {
-                    Txt(
-                        if (task.prio == 2) "!!" else "!",
-                        color = if (task.prio == 2) p.red else p.yellow,
-                        size = 16.sp,
-                        bold = true,
-                    )
+                    FlagIcon(prioColor(p, task.prio), iconSize = 18.dp)
                     Spacer(Modifier.width(6.dp))
                 }
                 Txt(
@@ -223,9 +218,6 @@ fun TaskRow(
                 )
             }
             TxtRich(meta, color = p.dim, size = 13.sp, maxLines = 2)
-            if (task.note.isNotBlank()) {
-                Txt(task.note, color = p.mute, size = 12.sp, maxLines = 2)
-            }
         }
         val mins = task.minutes
         if (mins != null) {

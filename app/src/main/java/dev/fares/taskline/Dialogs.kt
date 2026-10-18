@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.OutlinedTextField
@@ -111,7 +112,7 @@ fun TaskDialog(
     var start by remember { mutableStateOf<String?>(if (initial == null) today.toString() else initial.start) }
     var end by remember { mutableStateOf<String?>(if (initial == null) today.plusDays(2).toString() else initial.end) }
     var prio by remember { mutableStateOf(initial?.prio ?: 0) }
-    var note by remember { mutableStateOf(initial?.note ?: "") }
+    var flagsOpen by remember { mutableStateOf(false) }
     var timeText by remember { mutableStateOf(initial?.minutes?.let { minutesLabel(it) } ?: "") }
     var error by remember { mutableStateOf("") }
     var armed by remember { mutableStateOf(false) }
@@ -141,7 +142,7 @@ fun TaskDialog(
                 start = s,
                 end = e,
                 prio = prio,
-                note = note.trim(),
+                note = initial?.note ?: "",
                 done = initial?.done ?: false,
                 doneAt = initial?.doneAt,
                 created = initial?.created ?: System.currentTimeMillis(),
@@ -158,7 +159,54 @@ fun TaskDialog(
             modifier = Modifier.fillMaxWidth().padding(12.dp),
         ) {
             Column(Modifier.verticalScroll(rememberScrollState()).padding(16.dp)) {
-                Txt(if (initial == null) "New task" else "Edit task", size = 24.sp, serif = true)
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Txt(
+                        if (initial == null) "New task" else "Edit task",
+                        size = 24.sp,
+                        serif = true,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .background(if (flagsOpen) p.line else p.raised)
+                            .clickable(onClickLabel = "Choose a priority flag") { flagsOpen = !flagsOpen },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        FlagIcon(prioColor(p, prio), filled = prio > 0, iconSize = 22.dp)
+                    }
+                }
+                if (flagsOpen) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        for (level in 0..3) {
+                            val c = prioColor(p, level)
+                            val selected = prio == level
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(18.dp))
+                                    .background(if (selected) c.copy(alpha = 0.22f) else p.raised)
+                                    .clickable { prio = level; flagsOpen = false }
+                                    .padding(vertical = 12.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(6.dp),
+                            ) {
+                                FlagIcon(c, filled = level > 0, iconSize = 28.dp)
+                                Txt(
+                                    prioName(level),
+                                    color = if (selected) p.fg else p.dim,
+                                    size = 12.sp,
+                                    bold = selected,
+                                    maxLines = 1,
+                                )
+                            }
+                        }
+                    }
+                }
 
                 FieldLabel("Title")
                 OutlinedTextField(
@@ -242,41 +290,18 @@ fun TaskDialog(
                     placeholder = { Txt("or type it: 3h, 90m, 1h 30m", color = p.mute, size = 14.sp) },
                 )
 
-                FieldLabel("Priority")
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    val names = listOf("Low", "Medium", "High")
-                    for (i in 0..2) {
-                        TermButton(
-                            label = names[i],
-                            onClick = { prio = i },
-                            modifier = Modifier.weight(1f),
-                            color = if (i == 2) p.red else if (i == 1) p.yellow else p.green,
-                            filled = prio == i,
-                        )
-                    }
-                }
-
-                FieldLabel("Note")
-                OutlinedTextField(
-                    value = note,
-                    onValueChange = { note = it },
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 72.dp),
-                    maxLines = 4,
-                    shape = RoundedCornerShape(16.dp),
-                    textStyle = fieldStyle,
-                )
-
                 Txt(error, color = p.red, size = 12.sp, modifier = Modifier.padding(top = 10.dp).heightIn(min = 18.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    TermButton("Save", onClick = { save() }, color = p.green, filled = true)
-                    TermButton("Cancel", onClick = onDismiss)
-                    if (initial != null) {
-                        Spacer(Modifier.weight(1f))
+                    TermButton("Save", onClick = { save() }, modifier = Modifier.width(120.dp), color = p.green, filled = true)
+                    TermButton("Cancel", onClick = onDismiss, modifier = Modifier.width(120.dp))
+                }
+                if (initial != null) {
+                    Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.Center) {
                         TermButton(
                             if (armed) "Sure?" else "Delete",
                             onClick = { if (armed) onDelete() else armed = true },
@@ -357,11 +382,12 @@ fun GoalDialog(
 
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     TermButton(
                         "Save",
+                        modifier = Modifier.width(120.dp),
                         onClick = {
                             val t = title.trim()
                             if (t.isEmpty()) {
@@ -381,9 +407,10 @@ fun GoalDialog(
                         color = p.green,
                         filled = true,
                     )
-                    TermButton("Cancel", onClick = onDismiss)
-                    if (initial != null) {
-                        Spacer(Modifier.weight(1f))
+                    TermButton("Cancel", onClick = onDismiss, modifier = Modifier.width(120.dp))
+                }
+                if (initial != null) {
+                    Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.Center) {
                         TermButton(
                             if (armed) "Sure?" else "Delete",
                             onClick = { if (armed) onDelete() else armed = true },

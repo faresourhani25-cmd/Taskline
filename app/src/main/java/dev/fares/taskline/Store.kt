@@ -14,8 +14,9 @@ class Store(context: Context) {
             val root = JSONObject(raw)
             val taskArr = root.optJSONArray("tasks") ?: JSONArray()
             val goalArr = root.optJSONArray("goals") ?: JSONArray()
+            val version = root.optInt("v", 1)
             val tasks = ArrayList<Task>()
-            for (i in 0 until taskArr.length()) tasks.add(taskFrom(taskArr.getJSONObject(i)))
+            for (i in 0 until taskArr.length()) tasks.add(taskFrom(taskArr.getJSONObject(i), version))
             val goals = ArrayList<Goal>()
             for (i in 0 until goalArr.length()) goals.add(goalFrom(goalArr.getJSONObject(i)))
             Pair(tasks, goals)
@@ -34,6 +35,7 @@ class Store(context: Context) {
         val root = JSONObject()
         root.put("tasks", taskArr)
         root.put("goals", goalArr)
+        root.put("v", 2)
         prefs.edit().putString("data", root.toString()).apply()
     }
 
@@ -43,13 +45,21 @@ class Store(context: Context) {
         return if (v.isBlank()) null else v
     }
 
-    private fun taskFrom(o: JSONObject): Task = Task(
+    /** Priorities used to be 0 none, 1 medium, 2 high. Now 0 none, 1 low, 2 medium, 3 high. */
+    private fun migratePrio(p: Int, version: Int): Int =
+        if (version >= 2) p.coerceIn(0, 3) else when (p) {
+            1 -> 2
+            2 -> 3
+            else -> 0
+        }
+
+    private fun taskFrom(o: JSONObject, version: Int): Task = Task(
         id = o.getString("id"),
         title = o.optString("title", ""),
         goalId = o.optNullableString("goalId"),
         start = o.optNullableString("start"),
         end = o.optNullableString("end"),
-        prio = o.optInt("prio", 0),
+        prio = migratePrio(o.optInt("prio", 0), version),
         note = o.optString("note", ""),
         done = o.optBoolean("done", false),
         doneAt = if (o.isNull("doneAt")) null else o.optLong("doneAt"),
