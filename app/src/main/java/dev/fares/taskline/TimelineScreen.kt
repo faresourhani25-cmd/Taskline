@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -23,6 +24,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,7 +39,6 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
@@ -47,6 +48,8 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 
 private const val LETTERS = "MTWTFSS"
+private val RANGE_LABELS = listOf("1w", "2w", "3w")
+private val RANGE_DAYS = listOf(7, 14, 21)
 
 @Composable
 fun TimelineScreen(state: AppState, onEdit: (String) -> Unit) {
@@ -63,11 +66,6 @@ fun TimelineScreen(state: AppState, onEdit: (String) -> Unit) {
     }
 
     var zoom by rememberSaveable { mutableStateOf(1) }
-    val dayW: Dp = when (zoom) {
-        0 -> 22.dp
-        1 -> 34.dp
-        else -> 52.dp
-    }
     val range = timelineRange(dated, today)
     val lo = range.first
     val n = daysBetween(lo, range.second) + 1
@@ -76,56 +74,105 @@ fun TimelineScreen(state: AppState, onEdit: (String) -> Unit) {
     val vScroll = rememberScrollState()
     val density = LocalDensity.current
     val scope = rememberCoroutineScope()
+    val todayColor = p.goal(0)
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
+        // The range pills decide how many days fit across the screen.
+        val dayW: Dp = maxWidth / RANGE_DAYS[zoom.coerceIn(0, 2)]
+        val dayPx = with(density) { dayW.toPx() }
         val viewportPx = with(density) { maxWidth.toPx() }
         val todayTarget = {
-            val dayPx = with(density) { dayW.toPx() }
             ((todayIdx + 0.5f) * dayPx - viewportPx / 2f).toInt().coerceAtLeast(0)
         }
         LaunchedEffect(zoom, lo, viewportPx) {
             hScroll.scrollTo(todayTarget())
         }
 
+        // The month title follows the part of the timeline you are looking at.
+        val firstVisible by remember(dayPx, n, lo) {
+            derivedStateOf { ((hScroll.value / dayPx).toInt() + 1).coerceIn(0, n - 1) }
+        }
+        val shown = lo.plusDays(firstVisible.toLong())
+        val monthLabel = shown.month.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.ENGLISH) +
+            " " + shown.year
+
         Column(Modifier.fillMaxSize()) {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Txt("${dated.size} scheduled", color = p.dim, size = 12.sp, modifier = Modifier.weight(1f))
-                TermButton("−", onClick = { if (zoom > 0) zoom -= 1 }, enabled = zoom > 0)
-                TermButton("+", onClick = { if (zoom < 2) zoom += 1 }, enabled = zoom < 2)
-                TermButton("today", onClick = { scope.launch { hScroll.animateScrollTo(todayTarget()) } }, color = p.orange)
+                Txt(monthLabel, size = 20.sp, serif = true, maxLines = 1, modifier = Modifier.weight(1f))
+                RangePills(zoom, onZoom = { zoom = it })
+                TodayPill(todayColor) { scope.launch { hScroll.animateScrollTo(todayTarget()) } }
+            }
+            if (noDates > 0) {
+                val word = if (noDates > 1) "tasks have" else "task has"
+                val pron = if (noDates > 1) "them" else "it"
+                Txt(
+                    "$noDates $word no dates. Find $pron in List.",
+                    color = p.mute,
+                    size = 12.sp,
+                    modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 8.dp),
+                )
             }
 
-            Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(vScroll)) {
-                Box(Modifier.horizontalScroll(hScroll)) {
-                    TimelineBody(
-                        tasks = dated,
-                        state = state,
-                        lo = lo,
-                        n = n,
-                        today = today,
-                        todayIdx = todayIdx,
-                        dayW = dayW,
-                        scroll = hScroll,
-                        onEdit = onEdit,
-                    )
-                }
-                if (noDates > 0) {
-                    val word = if (noDates > 1) "tasks have" else "task has"
-                    val pron = if (noDates > 1) "them" else "it"
-                    Txt(
-                        "$noDates $word no dates. Find $pron in List.",
-                        color = p.dim,
-                        size = 12.sp,
-                        modifier = Modifier.padding(16.dp),
-                    )
-                }
-                Spacer(Modifier.height(110.dp))
+            Box(Modifier.weight(1f).fillMaxWidth().horizontalScroll(hScroll)) {
+                TimelineBody(
+                    tasks = dated,
+                    state = state,
+                    lo = lo,
+                    n = n,
+                    today = today,
+                    todayIdx = todayIdx,
+                    dayW = dayW,
+                    scroll = hScroll,
+                    vScroll = vScroll,
+                    onEdit = onEdit,
+                )
             }
         }
+    }
+}
+
+@Composable
+private fun RangePills(zoom: Int, onZoom: (Int) -> Unit) {
+    val p = LocalPalette.current
+    val pill = RoundedCornerShape(50)
+    Row(
+        modifier = Modifier.clip(pill).background(p.surface).padding(3.dp),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        for (i in RANGE_LABELS.indices) {
+            val selected = i == zoom
+            Box(
+                modifier = Modifier
+                    .width(38.dp)
+                    .height(34.dp)
+                    .clip(pill)
+                    .background(if (selected) p.raised else Color.Transparent)
+                    .clickable { onZoom(i) },
+                contentAlignment = Alignment.Center,
+            ) {
+                Txt(RANGE_LABELS[i], color = if (selected) p.fg else p.dim, size = 12.sp, bold = selected, maxLines = 1)
+            }
+        }
+    }
+}
+
+@Composable
+private fun TodayPill(color: Color, onClick: () -> Unit) {
+    val p = LocalPalette.current
+    Box(
+        modifier = Modifier
+            .height(40.dp)
+            .clip(RoundedCornerShape(50))
+            .background(p.surface)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Txt("Today", color = color, size = 12.sp, bold = true, maxLines = 1)
     }
 }
 
@@ -139,68 +186,83 @@ private fun TimelineBody(
     todayIdx: Int,
     dayW: Dp,
     scroll: ScrollState,
+    vScroll: ScrollState,
     onEdit: (String) -> Unit,
 ) {
     val p = LocalPalette.current
-    val months = remember(lo, n) { monthSegments(lo, n) }
-    val weekendShade = p.fg.copy(alpha = 0.06f)
-    val todayColor = p.orange
-    val lineColor = p.line
+    val weekendShade = p.fg.copy(alpha = 0.04f)
+    val gridColor = p.fg.copy(alpha = 0.05f)
+    val monthColor = p.fg.copy(alpha = 0.14f)
+    val todayColor = p.goal(0)
+    val compact = dayW < 22.dp
 
-    Column(Modifier.width(dayW * n)) {
-        // Month header
-        Row(Modifier.fillMaxWidth().background(p.surface)) {
-            for (m in months) {
-                val wide = dayW * m.days
-                val label = MONTHS[m.month - 1] + (if (wide > 90.dp) " " + m.year else "")
-                Box(
-                    modifier = Modifier.width(wide).height(26.dp).padding(start = 8.dp),
-                    contentAlignment = Alignment.CenterStart,
-                ) {
-                    Txt(label, color = p.dim, size = 12.sp, bold = true, maxLines = 1)
+    Column(
+        Modifier
+            .width(dayW * n)
+            .fillMaxHeight()
+            .drawBehind {
+                val w = dayW.toPx()
+                for (i in 0 until n) {
+                    val d = lo.plusDays(i.toLong())
+                    if (isWeekend(d)) {
+                        drawRect(
+                            color = weekendShade,
+                            topLeft = Offset(i * w, 0f),
+                            size = Size(w, size.height),
+                        )
+                    }
+                    drawLine(
+                        color = if (d.dayOfMonth == 1) monthColor else gridColor,
+                        start = Offset(i * w, 0f),
+                        end = Offset(i * w, size.height),
+                        strokeWidth = 1f,
+                    )
                 }
-            }
-        }
-        // Day header
-        Row(Modifier.fillMaxWidth().background(p.surface).lineBottom(lineColor)) {
+                val x = (todayIdx + 0.5f) * w
+                drawLine(
+                    color = todayColor,
+                    start = Offset(x, 0f),
+                    end = Offset(x, size.height),
+                    strokeWidth = 2f,
+                )
+            },
+    ) {
+        // Day header: it stays at the top while the rows scroll.
+        Row(Modifier.fillMaxWidth().lineBottom(p.line)) {
             for (i in 0 until n) {
                 val d = lo.plusDays(i.toLong())
                 val isToday = i == todayIdx
-                val letterColor = if (isToday) p.bg else p.dim
-                val numColor = if (isToday) p.bg else if (isWeekend(d)) p.dim else p.fg
                 Column(
-                    modifier = Modifier
-                        .width(dayW)
-                        .background(if (isToday) todayColor else Color.Transparent)
-                        .padding(vertical = 3.dp),
+                    modifier = Modifier.width(dayW).padding(top = 8.dp, bottom = 8.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Txt(LETTERS[d.dayOfWeek.value - 1].toString(), color = letterColor, size = 10.sp)
-                    Txt(d.dayOfMonth.toString(), color = numColor, size = 11.sp)
+                    Txt(
+                        LETTERS[d.dayOfWeek.value - 1].toString(),
+                        color = if (isToday) todayColor else p.mute,
+                        size = 10.sp,
+                        maxLines = 1,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (isToday) todayColor else Color.Transparent)
+                            .padding(horizontal = if (compact) 1.dp else 5.dp, vertical = 3.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Txt(
+                            d.dayOfMonth.toString(),
+                            color = if (isToday) p.bg else if (isWeekend(d)) p.dim else p.fg,
+                            size = if (compact) 9.sp else 12.sp,
+                            bold = isToday,
+                            maxLines = 1,
+                        )
+                    }
                 }
             }
         }
-        // Rows, with weekend shading and the today line drawn behind them
-        Column(
-            Modifier
-                .fillMaxWidth()
-                .drawBehind {
-                    val w = dayW.toPx()
-                    for (i in 0 until n) {
-                        if (isWeekend(lo.plusDays(i.toLong()))) {
-                            drawRect(color = weekendShade, topLeft = Offset(i * w, 0f), size = Size(w, size.height))
-                        }
-                    }
-                    val x = (todayIdx + 0.5f) * w
-                    drawLine(
-                        color = todayColor,
-                        start = Offset(x, 0f),
-                        end = Offset(x, size.height),
-                        strokeWidth = 2f,
-                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 8f)),
-                    )
-                },
-        ) {
+
+        Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(vScroll)) {
             for (t in tasks) {
                 TimelineRow(
                     task = t,
@@ -212,6 +274,7 @@ private fun TimelineBody(
                     onEdit = { onEdit(t.id) },
                 )
             }
+            Spacer(Modifier.height(110.dp))
         }
     }
 }
@@ -230,66 +293,71 @@ private fun TimelineRow(
     val sp = task.span() ?: return
     val startIdx = daysBetween(lo, sp.start)
     val len = daysBetween(sp.start, sp.end) + 1
-    val color = if (goal != null) p.goal(goal.color) else p.dim
-    val overdue = task.status(today) == Status.OVERDUE
-    val dur = task.durationDays()
-    val shape = RoundedCornerShape(11.dp)
-    val barWidth = dayW * len - 2.dp
+    val status = task.status(today)
+    val accent = if (goal != null) p.goal(goal.color) else when (status) {
+        Status.OVERDUE -> p.red
+        Status.ACTIVE -> p.orange
+        Status.DONE -> p.green
+        else -> p.dim
+    }
+    val shape = RoundedCornerShape(12.dp)
+    val barLeft = dayW * startIdx + 1.5.dp
+    val barWidth = dayW * len - 3.dp
 
-    Box(Modifier.fillMaxWidth().height(58.dp).lineBottom(p.line)) {
-        // The title stays in view while the timeline scrolls sideways.
+    Box(Modifier.fillMaxWidth().height(54.dp)) {
+        // The bar: a dark rounded block with a colored edge on its left.
+        Box(
+            modifier = Modifier
+                .offset(x = barLeft, y = 8.dp)
+                .width(barWidth)
+                .height(38.dp)
+                .alpha(if (task.done) 0.5f else 1f)
+                .clip(shape)
+                .background(p.raised)
+                .then(if (status == Status.OVERDUE) Modifier.border(1.5.dp, p.red, shape) else Modifier)
+                .clickable(onClick = onEdit),
+        ) {
+            Box(Modifier.width(5.dp).fillMaxHeight().background(accent))
+        }
+
+        // Flag, title and time sit on the bar. The title stays in view while you scroll along a long bar.
         Row(
             modifier = Modifier
-                .offset { IntOffset(scroll.value + 8.dp.roundToPx(), 0) }
-                .widthIn(max = 300.dp)
-                .clickable(onClick = onEdit)
-                .padding(top = 6.dp),
+                .offset {
+                    val pad = 14.dp.roundToPx()
+                    val start = barLeft.roundToPx() + pad
+                    val end = (barLeft + barWidth).roundToPx() - 64.dp.roundToPx()
+                    val sticky = scroll.value + 8.dp.roundToPx()
+                    IntOffset(sticky.coerceIn(start, maxOf(start, end)), 8.dp.roundToPx())
+                }
+                .height(38.dp)
+                .clickable(onClick = onEdit),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             if (task.prio > 0) {
-                FlagIcon(prioColor(p, task.prio), iconSize = 16.dp)
-                Spacer(Modifier.width(4.dp))
+                FlagIcon(prioColor(p, task.prio), iconSize = 15.dp)
+                Spacer(Modifier.width(5.dp))
             }
             Txt(
                 task.title,
                 color = if (task.done) p.dim else p.fg,
+                size = 13.sp,
+                bold = true,
                 strike = task.done,
                 maxLines = 1,
-                size = 13.sp,
+                modifier = Modifier.widthIn(max = 190.dp),
             )
-            if (dur != null) {
-                Txt(
-                    "  " + durationLabel(dur),
-                    color = p.dim,
-                    size = 12.sp,
-                    maxLines = 1,
-                )
-            }
             val mins = task.minutes
             if (mins != null) {
-                Txt(
-                    "  " + minutesLabel(mins),
-                    color = p.orange,
-                    size = 12.sp,
-                    bold = true,
-                    maxLines = 1,
-                )
-            }
-        }
-        Box(
-            modifier = Modifier
-                .offset(x = dayW * startIdx + 1.dp, y = 32.dp)
-                .width(barWidth)
-                .height(22.dp)
-                .alpha(if (task.done) 0.4f else 1f)
-                .clip(shape)
-                .background(color)
-                .then(if (overdue) Modifier.border(2.dp, p.red, shape) else Modifier)
-                .clickable(onClick = onEdit)
-                .padding(horizontal = 6.dp),
-            contentAlignment = Alignment.CenterStart,
-        ) {
-            if (barWidth >= 38.dp) {
-                Txt("${len}d", color = p.bg, size = 11.sp, maxLines = 1)
+                Spacer(Modifier.width(8.dp))
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(50))
+                        .background(p.line)
+                        .padding(horizontal = 8.dp, vertical = 3.dp),
+                ) {
+                    Txt(minutesLabel(mins), color = p.fg, size = 11.sp, bold = true, maxLines = 1)
+                }
             }
         }
     }
