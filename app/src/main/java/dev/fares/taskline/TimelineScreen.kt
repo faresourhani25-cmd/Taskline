@@ -17,9 +17,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
@@ -43,6 +45,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Dp
@@ -304,6 +310,12 @@ private fun TimelineBody(
     }
 }
 
+private fun shortDate(d: LocalDate): String =
+    MONTHS[d.monthValue - 1].replaceFirstChar { it.uppercase() } + " " + d.dayOfMonth
+
+private fun rangeLabel(sp: Span): String =
+    if (sp.start == sp.end) shortDate(sp.start) else shortDate(sp.start) + " \u2013 " + shortDate(sp.end)
+
 @Composable
 private fun TimelineRow(
     task: Task,
@@ -325,63 +337,110 @@ private fun TimelineRow(
         Status.DONE -> p.green
         else -> p.dim
     }
-    val shape = RoundedCornerShape(12.dp)
+    val shape = RoundedCornerShape(14.dp)
     val barLeft = dayW * startIdx + 1.5.dp
     val barWidth = dayW * len - 3.dp
+    val screenW = LocalConfiguration.current.screenWidthDp.dp
+    val wide = barWidth >= 190.dp
+    val titleMax = maxOf(110.dp, minOf(230.dp, barWidth - 64.dp))
 
-    Box(Modifier.fillMaxWidth().height(54.dp)) {
-        // The bar: a dark rounded block with a colored edge on its left.
+    val meta = buildAnnotatedString {
+        append(rangeLabel(sp))
+        if (task.done) {
+            append("  \u00b7  ")
+            withStyle(SpanStyle(color = p.green)) { append("Completed") }
+        } else if (status == Status.OVERDUE) {
+            append("  \u00b7  ")
+            withStyle(SpanStyle(color = p.red)) { append("Overdue") }
+        }
+        val mins = task.minutes
+        if (mins != null) {
+            append("  \u00b7  ")
+            withStyle(SpanStyle(color = p.fg, fontWeight = FontWeight.SemiBold)) { append(minutesLabel(mins)) }
+        }
+    }
+
+    Box(Modifier.fillMaxWidth().height(76.dp)) {
+        // The card: a dark rounded block with a short colored line at the top left.
         Box(
             modifier = Modifier
-                .offset(x = barLeft, y = 8.dp)
+                .offset(x = barLeft, y = 6.dp)
                 .width(barWidth)
-                .height(38.dp)
-                .alpha(if (task.done) 0.5f else 1f)
+                .height(64.dp)
+                .alpha(if (task.done) 0.55f else 1f)
                 .clip(shape)
                 .background(p.raised)
                 .then(if (status == Status.OVERDUE) Modifier.border(1.5.dp, p.red, shape) else Modifier)
                 .clickable(onClick = onEdit),
         ) {
-            Box(Modifier.width(5.dp).fillMaxHeight().background(accent))
+            Box(
+                Modifier
+                    .padding(start = 16.dp, top = 10.dp)
+                    .width(22.dp)
+                    .height(3.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(accent),
+            )
         }
 
-        // Flag, title and time sit on the bar. The title stays in view while you scroll along a long bar.
-        Row(
+        // Title and dates. They stay in view while you scroll along a long card.
+        Column(
             modifier = Modifier
                 .offset {
-                    val pad = 14.dp.roundToPx()
-                    val start = barLeft.roundToPx() + pad
-                    val end = (barLeft + barWidth).roundToPx() - 64.dp.roundToPx()
+                    val start = barLeft.roundToPx() + 16.dp.roundToPx()
+                    val end = (barLeft + barWidth).roundToPx() - (if (wide) 150.dp else 64.dp).roundToPx()
                     val sticky = scroll.value + 8.dp.roundToPx()
-                    IntOffset(sticky.coerceIn(start, maxOf(start, end)), 8.dp.roundToPx())
+                    IntOffset(sticky.coerceIn(start, maxOf(start, end)), 26.dp.roundToPx())
                 }
-                .height(38.dp)
                 .clickable(onClick = onEdit),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalArrangement = Arrangement.spacedBy(5.dp),
         ) {
-            if (task.prio > 0) {
-                FlagIcon(prioColor(p, task.prio), iconSize = 15.dp)
-                Spacer(Modifier.width(5.dp))
-            }
             Txt(
                 task.title,
                 color = if (task.done) p.dim else p.fg,
-                size = 13.sp,
+                size = 14.sp,
                 bold = true,
                 strike = task.done,
                 maxLines = 1,
-                modifier = Modifier.widthIn(max = 190.dp),
+                modifier = Modifier.widthIn(max = titleMax),
             )
-            val mins = task.minutes
-            if (mins != null) {
-                Spacer(Modifier.width(8.dp))
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(50))
-                        .background(p.line)
-                        .padding(horizontal = 8.dp, vertical = 3.dp),
-                ) {
-                    Txt(minutesLabel(mins), color = p.fg, size = 11.sp, bold = true, maxLines = 1)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                FlagIcon(
+                    color = if (task.prio > 0) prioColor(p, task.prio) else p.mute,
+                    filled = task.prio > 0,
+                    iconSize = 13.dp,
+                )
+                Spacer(Modifier.width(5.dp))
+                TxtRich(meta, color = p.dim, size = 11.sp, maxLines = 1, modifier = Modifier.widthIn(max = titleMax + 60.dp))
+            }
+        }
+
+        // The menu button at the right end of wide cards. It also opens the task.
+        if (wide) {
+            Box(
+                modifier = Modifier
+                    .offset {
+                        val size = 30.dp.roundToPx()
+                        val atEnd = (barLeft + barWidth).roundToPx() - 12.dp.roundToPx() - size
+                        val inView = scroll.value + screenW.roundToPx() - 12.dp.roundToPx() - size
+                        val minX = barLeft.roundToPx() + 130.dp.roundToPx()
+                        IntOffset(maxOf(minOf(atEnd, inView), minX), 16.dp.roundToPx())
+                    }
+                    .size(30.dp)
+                    .clip(CircleShape)
+                    .background(p.line)
+                    .clickable(onClickLabel = "Edit task", onClick = onEdit),
+                contentAlignment = Alignment.Center,
+            ) {
+                Canvas(Modifier.size(14.dp)) {
+                    val r = 1.6.dp.toPx()
+                    for (k in 0..2) {
+                        drawCircle(
+                            color = p.dim,
+                            radius = r,
+                            center = Offset(size.width / 2f, size.height * (0.18f + 0.32f * k)),
+                        )
+                    }
                 }
             }
         }
